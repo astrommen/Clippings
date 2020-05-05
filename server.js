@@ -3,6 +3,7 @@ var express = require("express");
 var exphbs = require("express-handlebars");
 var logger = require("morgan");
 var mongoose = require("mongoose");
+var path = require("path");
 
 // Scraping Tools
 var cheerio = require("cheerio");
@@ -18,17 +19,20 @@ var PORT = process.env.PORT || 3000;
 var app = express();
 
 //Configure middleware
-// Set Handlebars as the default templating engine.
-// app.engine("handlebars", exphbs({ defaultLayout: "main" }));
-// app.set("view engine", "handlebars");
 // Use morgan logger for requests
 app.use(logger("dev"));
+
 // Parse request body as JSON
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Make public static folder
 app.use(express.static("public"));
+
+// Set Handlebars as the default templating engine.
+app.engine("handlebars", exphbs({ defaultLayout: "main" }));
+app.set("view engine", "handlebars");
+app.set("views", path.join(__dirname,'views'));
 
 // Connect to Mongo DB
 mongoose.connect("mongodb://localhost/paleontologyClippings", { useNewUrlParser: true });
@@ -65,9 +69,26 @@ app.get("/scrape", function(req, res){
   });
 });
 
+app.get("/", function(req, res){
+  db.Article.find({}).then(function(dbArticles) {
+    const articles = [];
+    dbArticles.forEach(article => {
+      articles.push({
+        title: article.title,
+        link: article.link,
+        img: article.img
+      })
+    })
+    res.render("index", {articles: articles});
+  }).catch(function(err){
+    res.json(err);
+  });
+  
+})
+
 app.get("/articles", function(req, res) {
   // Grabb all documents in Articles collection
-  db.Article.find({}).then(function(dbArticle) {
+  db.Article.find({}).then(function(dbArticles) {
     res.json(dbArticle);
   }).catch(function(err){
     res.json(err);
